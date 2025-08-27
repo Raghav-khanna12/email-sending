@@ -62,26 +62,30 @@ public class TabValidationAndEmailTest {
 
         driver.get(baseUrl);
 
-        class TabResult { String url; boolean ok; String note; TabResult(String u, boolean o, String n){url=u;ok=o;note=n;} }
+        class TabResult { String url; boolean ok; String note; long loadMillis; TabResult(String u, boolean o, String n, long ms){url=u;ok=o;note=n;loadMillis=ms;} }
         int visited = 0; int okCount = 0; int failCount = 0;
+        java.time.Instant startSuite = java.time.Instant.now();
         java.util.ArrayList<TabResult> results = new java.util.ArrayList<>();
         for (String tabUrl : tabUrls) {
             String url = sanitizeUrl(tabUrl);
             if (url == null || url.isBlank()) {
-                results.add(new TabResult(tabUrl, false, "blank URL"));
+                results.add(new TabResult(tabUrl, false, "blank URL", 0));
                 System.out.println("[tabs] Skipping blank URL entry");
                 failCount++; continue;
             }
             try {
+                long t0 = System.nanoTime();
                 driver.get(url);
+                long t1 = System.nanoTime();
+                long elapsedMs = java.time.Duration.ofNanos(t1 - t0).toMillis();
                 visited++;
                 List<WebElement> bodies = driver.findElements(By.tagName("body"));
                 boolean ok = !bodies.isEmpty();
-                if (ok) { okCount++; results.add(new TabResult(url, true, "body present")); }
-                else { failCount++; results.add(new TabResult(url, false, "body not found")); }
+                if (ok) { okCount++; results.add(new TabResult(url, true, "body present", elapsedMs)); }
+                else { failCount++; results.add(new TabResult(url, false, "body not found", elapsedMs)); }
             } catch (Exception e) {
                 String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
-                results.add(new TabResult(url, false, msg));
+                results.add(new TabResult(url, false, msg, 0));
                 System.out.println("[tabs] Failed URL: " + url + " reason=" + msg);
                 failCount++;
             }
@@ -108,16 +112,27 @@ public class TabValidationAndEmailTest {
         SendGridService mailer = new SendGridService(apiKey, fromEmail);
         boolean allOk = failCount == 0 && visited == tabUrls.size();
         String subject = (allOk ? "SUCCESS" : "FAILURE") + " - Tab validation: " + okCount + " passed / " + failCount + " failed";
+        java.time.Instant endSuite = java.time.Instant.now();
+        long totalSeconds = java.time.Duration.between(startSuite, endSuite).toSeconds();
+        String runNumber = System.getenv().getOrDefault("GITHUB_RUN_NUMBER", "");
+        String runAttempt = System.getenv().getOrDefault("GITHUB_RUN_ATTEMPT", "");
+        String runId = System.getenv().getOrDefault("GITHUB_RUN_ID", "");
+
         StringBuilder bodyBuilder = new StringBuilder();
         bodyBuilder.append("<p>Base URL: ").append(baseUrl).append("</p>");
         bodyBuilder.append("<p>Summary: ").append(okCount).append(" passed, ").append(failCount).append(" failed, visited ").append(visited).append("/ ").append(tabUrls.size()).append("</p>");
+        bodyBuilder.append("<p>Total duration: ").append(totalSeconds).append("s</p>");
+        if (!runId.isBlank()) {
+            bodyBuilder.append("<p>Workflow run: #").append(runNumber).append(" attempt ").append(runAttempt).append(" (ID ").append(runId).append(")</p>");
+        }
         bodyBuilder.append("<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;font-family:Segoe UI,Arial,sans-serif;'>");
-        bodyBuilder.append("<tr><th align='left'>URL</th><th>Status</th><th align='left'>Note</th></tr>");
+        bodyBuilder.append("<tr><th align='left'>URL</th><th>Status</th><th align='left'>Note</th><th>Load (ms)</th></tr>");
         for (TabResult r : results) {
             bodyBuilder.append("<tr>")
                     .append("<td>").append(r.url == null ? "(null)" : r.url).append("</td>")
                     .append("<td style='color:").append(r.ok ? "#27ae60'">PASS" : "#c0392b'">FAIL").append("</td>")
                     .append("<td>").append(r.note == null ? "" : r.note.replace("<","&lt;")).append("</td>")
+                    .append("<td align='right'>").append(r.loadMillis).append("</td>")
                     .append("</tr>");
         }
         bodyBuilder.append("</table>");
