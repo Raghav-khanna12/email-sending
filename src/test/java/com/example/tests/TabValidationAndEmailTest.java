@@ -7,6 +7,7 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import io.github.bonigarcia.wdm.WebDriverManager;
+import org.openqa.selenium.InvalidArgumentException;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -48,21 +49,26 @@ public class TabValidationAndEmailTest {
 
     @Test
     public void validateTabsAndSendEmail() throws IOException {
-        String baseUrl = System.getProperty("base.url", System.getenv().getOrDefault("BASE_URL", "https://careers.ey.com/ey?locale=en_US"));
-        if (baseUrl != null) {
-            baseUrl = baseUrl.trim().replace(" ", "%20");
-        }
+        String baseUrl = sanitizeUrl(System.getProperty("base.url", System.getenv().getOrDefault("BASE_URL", "https://careers.ey.com/ey?locale=en_US")));
         String tabUrlsCsv = System.getProperty("tab.urls", System.getenv().getOrDefault("TAB_URLS", "https://www.ey.com/en_gl/careers,https://www.ey.com/en_gl/insights,https://www.ey.com/en_gl/services"));
         List<String> tabUrls = tabUrlsCsv.isBlank() ? List.of(
                 "https://www.ey.com/en_gl/careers",
                 "https://www.ey.com/en_gl/insights",
                 "https://www.ey.com/en_gl/services"
-        ) : Arrays.stream(tabUrlsCsv.split(",")).map(String::trim).toList();
+        ) : Arrays.stream(tabUrlsCsv.split(","))
+                .map(this::sanitizeUrl)
+                .filter(s -> s != null && !s.isBlank())
+                .toList();
 
         driver.get(baseUrl);
 
         for (String tabUrl : tabUrls) {
-            driver.get(tabUrl);
+            try {
+                driver.get(tabUrl);
+            } catch (InvalidArgumentException e) {
+                String fixed = sanitizeUrl(tabUrl);
+                driver.get(fixed);
+            }
             List<WebElement> bodies = driver.findElements(By.tagName("body"));
             Assert.assertTrue(!bodies.isEmpty(), "Body not found for URL: " + tabUrl);
         }
@@ -90,6 +96,17 @@ public class TabValidationAndEmailTest {
                 "<p>Base URL: " + baseUrl + "</p>" +
                 "<p>Validated tabs:</p><ul>" + String.join("", tabUrls.stream().map(u -> "<li>" + u + "</li>").toList()) + "</ul>";
         mailer.sendEmail(recipients, subject, body);
+    }
+
+    private String sanitizeUrl(String raw) {
+        if (raw == null) return null;
+        String s = raw.trim();
+        if (s.isBlank()) return s;
+        s = s.replace(" ", "%20");
+        if (!s.startsWith("http://") && !s.startsWith("https://")) {
+            s = "https://" + s;
+        }
+        return s;
     }
 }
 
