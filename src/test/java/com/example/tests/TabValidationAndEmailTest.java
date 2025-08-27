@@ -62,25 +62,29 @@ public class TabValidationAndEmailTest {
 
         driver.get(baseUrl);
 
-        int visited = 0;
+        class TabResult { String url; boolean ok; String note; TabResult(String u, boolean o, String n){url=u;ok=o;note=n;} }
+        int visited = 0; int okCount = 0; int failCount = 0;
+        java.util.ArrayList<TabResult> results = new java.util.ArrayList<>();
         for (String tabUrl : tabUrls) {
             String url = sanitizeUrl(tabUrl);
             if (url == null || url.isBlank()) {
+                results.add(new TabResult(tabUrl, false, "blank URL"));
                 System.out.println("[tabs] Skipping blank URL entry");
-                continue;
+                failCount++; continue;
             }
             try {
                 driver.get(url);
+                visited++;
+                List<WebElement> bodies = driver.findElements(By.tagName("body"));
+                boolean ok = !bodies.isEmpty();
+                if (ok) { okCount++; results.add(new TabResult(url, true, "body present")); }
+                else { failCount++; results.add(new TabResult(url, false, "body not found")); }
             } catch (Exception e) {
-                System.out.println("[tabs] Skipped invalid URL: " + url + " reason=" + e.getMessage());
-                continue;
+                String msg = e.getClass().getSimpleName() + ": " + e.getMessage();
+                results.add(new TabResult(url, false, msg));
+                System.out.println("[tabs] Failed URL: " + url + " reason=" + msg);
+                failCount++;
             }
-            List<WebElement> bodies = driver.findElements(By.tagName("body"));
-            if (bodies.isEmpty()) {
-                System.out.println("[tabs] No body found for URL: " + url);
-                continue;
-            }
-            visited++;
         }
 
         Set<String> recipients = new LinkedHashSet<>();
@@ -102,11 +106,22 @@ public class TabValidationAndEmailTest {
         Assert.assertFalse(fromEmail.isBlank(), "EMAIL_FROM is required");
 
         SendGridService mailer = new SendGridService(apiKey, fromEmail);
-        String subject = "Tab validation completed: visited " + visited + "/" + tabUrls.size();
-        String body = "<p>Automation completed.</p>" +
-                "<p>Base URL: " + baseUrl + "</p>" +
-                "<p>Attempted tabs:</p><ul>" + String.join("", tabUrls.stream().map(u -> "<li>" + sanitizeUrl(u) + "</li>").toList()) + "</ul>" +
-                "<p>Visited count: " + visited + "</p>";
+        boolean allOk = failCount == 0 && visited == tabUrls.size();
+        String subject = (allOk ? "SUCCESS" : "FAILURE") + " - Tab validation: " + okCount + " passed / " + failCount + " failed";
+        StringBuilder bodyBuilder = new StringBuilder();
+        bodyBuilder.append("<p>Base URL: ").append(baseUrl).append("</p>");
+        bodyBuilder.append("<p>Summary: ").append(okCount).append(" passed, ").append(failCount).append(" failed, visited ").append(visited).append("/ ").append(tabUrls.size()).append("</p>");
+        bodyBuilder.append("<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;font-family:Segoe UI,Arial,sans-serif;'>");
+        bodyBuilder.append("<tr><th align='left'>URL</th><th>Status</th><th align='left'>Note</th></tr>");
+        for (TabResult r : results) {
+            bodyBuilder.append("<tr>")
+                    .append("<td>").append(r.url == null ? "(null)" : r.url).append("</td>")
+                    .append("<td style='color:").append(r.ok ? "#27ae60'">PASS" : "#c0392b'">FAIL").append("</td>")
+                    .append("<td>").append(r.note == null ? "" : r.note.replace("<","&lt;")).append("</td>")
+                    .append("</tr>");
+        }
+        bodyBuilder.append("</table>");
+        String body = bodyBuilder.toString();
         mailer.sendEmail(recipients, subject, body);
     }
 
