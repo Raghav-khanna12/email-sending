@@ -97,6 +97,7 @@ public class TabValidationAndEmailTest {
 
         String apiKey = System.getProperty("sendgrid.api.key", System.getenv().getOrDefault("SENDGRID_API_KEY", ""));
         String fromEmail = System.getProperty("email.from", System.getenv().getOrDefault("EMAIL_FROM", "raghavk15@outlook.com"));
+        System.out.println("[Email] Test about to send: keyPresent=" + !apiKey.isBlank() + ", from=" + fromEmail + ", toCount=" + recipients.size());
         Assert.assertFalse(apiKey.isBlank(), "SENDGRID_API_KEY is required");
         Assert.assertFalse(fromEmail.isBlank(), "EMAIL_FROM is required");
 
