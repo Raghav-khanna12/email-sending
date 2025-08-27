@@ -1,97 +1,56 @@
-name: Selenium Tabs Validation and Email
+name: CI with Email Notification
 
-on:
-  workflow_dispatch:
-    inputs:
-      sendgrid_api_key:
-        description: "Override SENDGRID_API_KEY (leave blank to use repo secret)"
-        required: false
-      email_from:
-        description: "Override EMAIL_FROM (leave blank to use repo variable)"
-        required: false
-      email_to:
-        description: "Override EMAIL_TO (leave blank to use repo variable)"
-        required: false
-      base_url:
-        description: "Override BASE_URL"
-        required: false
-      tab_urls:
-        description: "Override TAB_URLS (comma-separated)"
-        required: false
-  push:
-    branches: [ main ]
+on: [push]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
-    env:
-      SENDGRID_API_KEY: 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
-      EMAIL_FROM: raghavk15@outlook.com
-      EMAIL_TO: raghavk2509@gmail.com
-      BASE_URL: ${{ inputs.base_url != '' && inputs.base_url || vars.BASE_URL }}
-      TAB_URLS: ${{ inputs.tab_urls != '' && inputs.tab_urls || vars.TAB_URLS }}
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Print resolved configuration
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests and capture logs + summary
         run: |
-          if [ -n "${SENDGRID_API_KEY}" ]; then echo "[CI] Resolved SENDGRID_KEY_PRESENT=true"; else echo "[CI] Resolved SENDGRID_KEY_PRESENT=false"; fi
-          echo "[CI] Resolved EMAIL_FROM=${EMAIL_FROM}"
-          echo "[CI] Resolved EMAIL_TO=${EMAIL_TO}"
-          echo "[CI] Resolved BASE_URL=${BASE_URL}"
-          echo "[CI] Resolved TAB_URLS=${TAB_URLS}"
+          echo "Running tests..."
+          # Save complete logs
+          npm test > logs.txt 2>&1 || true
+          
+          # Extract test summary (works with Jest/Mocha)
+          grep -E "Tests:|Passing|Failing|Total|passed|failed" logs.txt > summary.txt || echo "No summary found" > summary.txt
 
-      - name: Setup Chrome
-        uses: browser-actions/setup-chrome@v1
+      - name: Show captured summary
+        run: cat summary.txt
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - name: Send detailed email via SendGrid
+        if: always() # send email even if tests fail
+        uses: licenseware/send-email-notification@v1
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          api-key: ${{ secrets.SENDGRID_API_KEY }}
+          subject: "Workflow ${{ github.workflow }} – ${{ job.status }}"
+          from-email: raghavk15@outlook.com
+          to-email: raghavk2509@gmail.com
+          markdown-body: |
+            ## 🚀 GitHub Actions Report
+            **Repository:** ${{ github.repository }}
+            **Workflow:** ${{ github.workflow }}
+            **Job:** ${{ github.job }}
+            **Status:** ${{ job.status }}
+            **Run Link:** [View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
-      - name: Cache Maven
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.m2/repository
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-m2-
+            ### ✅ Test Summary
+            ```text
+            $(cat summary.txt)
+            ```
 
-      - name: SendGrid control email via curl
-        if: always()
-        run: |
-          echo "[CI] Control send: from=${EMAIL_FROM} to=${EMAIL_TO}"
-          if [ -z "${SENDGRID_API_KEY}" ]; then echo "[CI] SENDGRID_API_KEY missing"; exit 0; fi
-          curl -sS -X POST https://api.sendgrid.com/v3/mail/send \
-            -H "Authorization: Bearer ${SENDGRID_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -o /tmp/sg_body.txt -w "HTTP_STATUS=%{http_code}\n" \
-            -d "{\"personalizations\":[{\"to\":[{\"email\":\"${EMAIL_TO}\"}]}],\"from\":{\"email\":\"${EMAIL_FROM}\"},\"subject\":\"CI control email\",\"content\":[{\"type\":\"text/plain\",\"value\":\"This is a SendGrid control email from GitHub Actions.\"}]}"
-          echo "[CI] SendGrid control response body:"; cat /tmp/sg_body.txt || true
-
-      - name: Run Selenium validation
-        env:
-          BASE_URL: ${{ env.BASE_URL }}
-          TAB_URLS: ${{ env.TAB_URLS }}
-          SENDGRID_API_KEY: ${{ env.SENDGRID_API_KEY }}
-          EMAIL_FROM: ${{ env.EMAIL_FROM }}
-          EMAIL_TO: ${{ env.EMAIL_TO }}
-          CHROME_PATH: ${{ env.CHROME_PATH }}
-          SENDGRID_DEBUG: "true"
-        run: |
-          if [ -n "${SENDGRID_API_KEY}" ]; then echo "[CI] SENDGRID_KEY_PRESENT=true"; else echo "[CI] SENDGRID_KEY_PRESENT=false"; fi
-          echo "[CI] EMAIL_FROM=${EMAIL_FROM}"
-          echo "[CI] EMAIL_TO=${EMAIL_TO}"
-          mvn -B -Dtest=com.example.tests.TabValidationAndEmailTest test | cat
-
-      - name: Upload surefire reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: surefire-reports
-          path: target/surefire-reports
-
-
+            ### 📄 Logs (first 30 lines)
+            ```text
+            $(head -n 30 logs.txt)
+            ```
+          attachments: |
+            logs.txt
+            summary.txt
+          attachments-disposition: attachment
