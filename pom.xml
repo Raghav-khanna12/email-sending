@@ -67,12 +67,7 @@
                         <base.url>${env.BASE_URL}</base.url>
                         <tab.urls>${env.TAB_URLS}</tab.urls>
                     </systemPropertyVariables>
-                    <properties>
-                        <property>
-                            <name>listener</name>
-                            <value>org.uncommons.reportng.HTMLReporter,org.uncommons.reportng.JUnitXMLReporter</value>
-                        </property>
-                    </properties>
+                    
                 </configuration>
             </plugin>
         </plugins>
