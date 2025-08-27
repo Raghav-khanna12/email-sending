@@ -26,7 +26,7 @@ public class EmailResultListener implements ITestListener, ISuiteListener {
 
         String toCsv = System.getProperty("email.to", System.getenv().getOrDefault("EMAIL_TO", "raghavk2509@gmail.com"));
         String fromEmail = System.getProperty("email.from", System.getenv().getOrDefault("EMAIL_FROM", "raghavk15@outlook.com"));
-        String apiKey = System.getProperty("sendgrid.api.key", System.getenv().getOrDefault("SENDGRID_API_KEY", ""));
+        String apiKey = System.getProperty("sendgrid.api.key", System.getenv().getOrDefault("SENDGRID_API_KEY", "SG.JOjB9iJkQYuw08cqGfJDsA.aY-Fs0tjke7oh-5Hxnb_y_AVGwBBI-qice0sHuaABE4Copied!"));
 
         if (apiKey == null || apiKey.isBlank()) {
             return; // No key configured; skip email silently in local/dev
