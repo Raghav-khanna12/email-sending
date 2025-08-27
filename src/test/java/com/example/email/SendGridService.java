@@ -47,14 +47,10 @@ public class SendGridService {
             request.setBody(mail.build());
             Response response = sg.api(request);
             int status = response.getStatusCode();
-            String debug = System.getenv().getOrDefault("SENDGRID_DEBUG", "");
-            boolean debugEnabled = !debug.isBlank() && ("1".equals(debug) || "true".equalsIgnoreCase(debug));
-            if (debugEnabled) {
-                String messageId = response.getHeaders() != null ? response.getHeaders().get("X-Message-Id") : null;
-                System.out.println("[SendGrid] API response: status=" + status +
-                        (messageId != null ? ", X-Message-Id=" + messageId : "") +
-                        ", body=" + response.getBody());
-            }
+            String messageId = response.getHeaders() != null ? response.getHeaders().get("X-Message-Id") : null;
+            System.out.println("[SendGrid] API response: status=" + status +
+                    (messageId != null ? ", X-Message-Id=" + messageId : "") +
+                    ", body=" + response.getBody());
             if (status >= 400) {
                 throw new IOException("SendGrid error: status=" + status + ", body=" + response.getBody());
             }
