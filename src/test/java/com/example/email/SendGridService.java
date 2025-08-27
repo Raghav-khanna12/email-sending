@@ -50,6 +50,11 @@ public class SendGridService {
             if (status >= 400) {
                 throw new IOException("SendGrid error: status=" + status + ", body=" + response.getBody());
             }
+            String debug = System.getenv().getOrDefault("SENDGRID_DEBUG", "");
+            if (!debug.isBlank() && ("1".equals(debug) || "true".equalsIgnoreCase(debug))) {
+                String messageId = response.getHeaders() != null ? response.getHeaders().get("X-Message-Id") : null;
+                System.out.println("[SendGrid] Delivered to API successfully: status=" + status + (messageId != null ? ", X-Message-Id=" + messageId : ""));
+            }
         } catch (IOException e) {
             throw e;
         }

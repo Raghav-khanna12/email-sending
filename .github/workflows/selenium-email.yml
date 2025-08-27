@@ -38,6 +38,7 @@ jobs:
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
           EMAIL_TO: ${{ vars.EMAIL_TO }}
           CHROME_PATH: ${{ env.CHROME_PATH }}
+          SENDGRID_DEBUG: "true"
         run: mvn -B -Dtest=com.example.tests.TabValidationAndEmailTest test | cat
 
       - name: Upload surefire reports
