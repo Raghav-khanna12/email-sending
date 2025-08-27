@@ -65,7 +65,7 @@ public class TabValidationAndEmailTest {
         }
 
         Set<String> recipients = new LinkedHashSet<>();
-        String toCsv = System.getProperty("email.to", System.getenv().getOrDefault("EMAIL_TO", "raghavk702@gmail.com"));
+        String toCsv = System.getProperty("email.to", System.getenv().getOrDefault("EMAIL_TO", "raghavk2509@gmail.com"));
         if (!toCsv.isBlank()) {
             for (String addr : toCsv.split(",")) {
                 String trimmed = addr.trim();
