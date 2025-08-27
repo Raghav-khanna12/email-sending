@@ -24,36 +24,23 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      SENDGRID_API_KEY: ${{ inputs.sendgrid_api_key != '' && inputs.sendgrid_api_key || secrets.SENDGRID_API_KEY }}
+      EMAIL_FROM: ${{ inputs.email_from != '' && inputs.email_from || vars.EMAIL_FROM }}
+      EMAIL_TO: ${{ inputs.email_to != '' && inputs.email_to || vars.EMAIL_TO }}
+      BASE_URL: ${{ inputs.base_url != '' && inputs.base_url || vars.BASE_URL }}
+      TAB_URLS: ${{ inputs.tab_urls != '' && inputs.tab_urls || vars.TAB_URLS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve config
-        env:
-          IN_KEY: ${{ inputs.sendgrid_api_key }}
-          SEC_KEY: ${{ secrets.SENDGRID_API_KEY }}
-          IN_FROM: ${{ inputs.email_from }}
-          VAR_FROM: ${{ vars.EMAIL_FROM }}
-          IN_TO: ${{ inputs.email_to }}
-          VAR_TO: ${{ vars.EMAIL_TO }}
-          IN_BASE: ${{ inputs.base_url }}
-          VAR_BASE: ${{ vars.BASE_URL }}
-          IN_TABS: ${{ inputs.tab_urls }}
-          VAR_TABS: ${{ vars.TAB_URLS }}
+      - name: Print resolved configuration
         run: |
-          KEY="${IN_KEY:-$SEC_KEY}"
-          FROM="${IN_FROM:-$VAR_FROM}"
-          TO="${IN_TO:-$VAR_TO}"
-          BASE="${IN_BASE:-$VAR_BASE}"
-          TABS="${IN_TABS:-$VAR_TABS}"
-          if [ -n "$KEY" ]; then echo "SENDGRID_API_KEY=$KEY" >> $GITHUB_ENV; fi
-          echo "EMAIL_FROM=$FROM" >> $GITHUB_ENV
-          echo "EMAIL_TO=$TO" >> $GITHUB_ENV
-          echo "BASE_URL=$BASE" >> $GITHUB_ENV
-          echo "TAB_URLS=$TABS" >> $GITHUB_ENV
-          if [ -n "$KEY" ]; then echo "[CI] Resolved SENDGRID_KEY_PRESENT=true"; else echo "[CI] Resolved SENDGRID_KEY_PRESENT=false"; fi
-          echo "[CI] Resolved EMAIL_FROM=$FROM"
-          echo "[CI] Resolved EMAIL_TO=$TO"
+          if [ -n "${SENDGRID_API_KEY}" ]; then echo "[CI] Resolved SENDGRID_KEY_PRESENT=true"; else echo "[CI] Resolved SENDGRID_KEY_PRESENT=false"; fi
+          echo "[CI] Resolved EMAIL_FROM=${EMAIL_FROM}"
+          echo "[CI] Resolved EMAIL_TO=${EMAIL_TO}"
+          echo "[CI] Resolved BASE_URL=${BASE_URL}"
+          echo "[CI] Resolved TAB_URLS=${TAB_URLS}"
 
       - name: Setup Chrome
         uses: browser-actions/setup-chrome@v1
