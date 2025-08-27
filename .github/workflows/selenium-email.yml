@@ -39,7 +39,11 @@ jobs:
           EMAIL_TO: ${{ vars.EMAIL_TO }}
           CHROME_PATH: ${{ env.CHROME_PATH }}
           SENDGRID_DEBUG: "true"
-        run: mvn -B -Dtest=com.example.tests.TabValidationAndEmailTest test | cat
+        run: |
+          if [ -n "${SENDGRID_API_KEY}" ]; then echo "[CI] SENDGRID_KEY_PRESENT=true"; else echo "[CI] SENDGRID_KEY_PRESENT=false"; fi
+          echo "[CI] EMAIL_FROM=${EMAIL_FROM}"
+          echo "[CI] EMAIL_TO=${EMAIL_TO}"
+          mvn -B -Dtest=com.example.tests.TabValidationAndEmailTest test | cat
 
       - name: Upload surefire reports
         if: always()
