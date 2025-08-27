@@ -25,7 +25,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      SENDGRID_API_KEY: ${{ inputs.sendgrid_api_key != '' && inputs.sendgrid_api_key || secrets.SENDGRID_API_KEY }}
+      SENDGRID_API_KEY: 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
       EMAIL_FROM: raghavk15@outlook.com
       EMAIL_TO: raghavk2509@gmail.com
       BASE_URL: ${{ inputs.base_url != '' && inputs.base_url || vars.BASE_URL }}
