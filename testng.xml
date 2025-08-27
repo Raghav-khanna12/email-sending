@@ -6,6 +6,9 @@
 			<class name="com.example.tests.TabValidationAndEmailTest"/>
 		</classes>
 	</test>
+    <listeners>
+        <listener class-name="com.example.tests.EmailResultListener"/>
+    </listeners>
 </suite>
 
 
