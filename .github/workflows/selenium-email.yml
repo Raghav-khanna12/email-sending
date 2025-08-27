@@ -32,7 +32,7 @@ jobs:
           api-key: ${{ secrets.SENDGRID_API_KEY }}
           subject: "Workflow ${{ github.workflow }} – ${{ job.status }}"
           from-email: raghavk15@outlook.com
-          to-email: raghavk2509@gmail.com
+          to-email: your-email@example.com
           markdown-body: |
             ## 🚀 GitHub Actions Report
             **Repository:** ${{ github.repository }}
