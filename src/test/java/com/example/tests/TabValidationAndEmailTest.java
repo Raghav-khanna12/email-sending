@@ -25,7 +25,7 @@ public class TabValidationAndEmailTest {
     @BeforeClass
     public void setup() {
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless=new");
+        options.addArguments("--headless");
         options.addArguments("--disable-gpu");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
@@ -49,6 +49,9 @@ public class TabValidationAndEmailTest {
     @Test
     public void validateTabsAndSendEmail() throws IOException {
         String baseUrl = System.getProperty("base.url", System.getenv().getOrDefault("BASE_URL", "https://careers.ey.com/ey?locale=en_US"));
+        if (baseUrl != null) {
+            baseUrl = baseUrl.trim().replace(" ", "%20");
+        }
         String tabUrlsCsv = System.getProperty("tab.urls", System.getenv().getOrDefault("TAB_URLS", "https://www.ey.com/en_gl/careers,https://www.ey.com/en_gl/insights,https://www.ey.com/en_gl/services"));
         List<String> tabUrls = tabUrlsCsv.isBlank() ? List.of(
                 "https://www.ey.com/en_gl/careers",
