@@ -30,6 +30,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-m2-
 
+      - name: SendGrid control email via curl
+        if: always()
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          EMAIL_TO: ${{ vars.EMAIL_TO }}
+        run: |
+          echo "[CI] Control send: from=${EMAIL_FROM} to=${EMAIL_TO}"
+          if [ -z "${SENDGRID_API_KEY}" ]; then echo "[CI] SENDGRID_API_KEY missing"; exit 0; fi
+          curl -sS -X POST https://api.sendgrid.com/v3/mail/send \
+            -H "Authorization: Bearer ${SENDGRID_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -o /tmp/sg_body.txt -w "HTTP_STATUS=%{http_code}\n" \
+            -d "{\"personalizations\":[{\"to\":[{\"email\":\"${EMAIL_TO}\"}]}],\"from\":{\"email\":\"${EMAIL_FROM}\"},\"subject\":\"CI control email\",\"content\":[{\"type\":\"text/plain\",\"value\":\"This is a SendGrid control email from GitHub Actions.\"}]}"
+          echo "[CI] SendGrid control response body:"; cat /tmp/sg_body.txt || true
+
       - name: Run Selenium validation
         env:
           BASE_URL: ${{ vars.BASE_URL }}
