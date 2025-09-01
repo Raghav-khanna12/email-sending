@@ -1,4 +1,4 @@
-name: CI with Email Notification
+name: CI with Email Notification.
 
 on: [push]
 
